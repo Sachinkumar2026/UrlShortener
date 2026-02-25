@@ -37,4 +37,15 @@ public class UrlService {
         }
         return code.toString();
     }
+
+    public String getOriginalUrl(String shortCode){
+        Url url = urlRepository.findByShortCode(shortCode).orElseThrow(() -> new RuntimeException("URL not found"));
+
+        if(url.getExpiryDate().isBefore(LocalDateTime.now())){
+            throw new RuntimeException("URL expired");
+        }
+        url.setClickCount(url.getClickCount() + 1);
+        urlRepository.save(url);
+        return url.getOriginalUrl();
+    }
 }
