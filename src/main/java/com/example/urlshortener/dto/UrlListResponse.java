@@ -7,16 +7,10 @@ import java.time.LocalDateTime;
 
 @Data
 @Builder
-public class UrlStatsResponse {
+public class UrlListResponse {
     private String originalUrl;
     private String shortCode;
     private Long clickCount;
-
     private LocalDateTime createdAt;
-    private  LocalDateTime expiryDate;
-
-    private boolean expired;
-    private long daysRemaining;
-    private String status;
-
+    private LocalDateTime expiryDate;
 }

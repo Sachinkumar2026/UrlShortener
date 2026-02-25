@@ -1,10 +1,14 @@
 package com.example.urlshortener.service;
 
+import com.example.urlshortener.dto.UrlListResponse;
 import com.example.urlshortener.dto.UrlStatsResponse;
+import com.example.urlshortener.exception.AliasAlreadyExistException;
 import com.example.urlshortener.exception.UrlExpiredException;
 import com.example.urlshortener.exception.UrlNotFoundException;
 import com.example.urlshortener.model.Url;
 import com.example.urlshortener.repository.UrlRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -21,7 +25,7 @@ public class UrlService {
         String shortCode;
         if(customAlias != null && !customAlias.isBlank()){
             if(urlRepository.findByShortCode(customAlias).isPresent()){
-                throw new RuntimeException("Alias already in use");
+                throw new AliasAlreadyExistException("Alias already in use");
             }
             shortCode = customAlias;
         }else {
@@ -48,16 +52,31 @@ public class UrlService {
         }
         return code.toString();
     }
+
+
     public UrlStatsResponse getStats(String shortCode){
         Url url = urlRepository.findByShortCode(shortCode)
                 .orElseThrow(() -> new UrlNotFoundException("short URL not found"));
+
+        boolean isExpired = url.getExpiryDate().isBefore(LocalDateTime.now());
+
+        long daysRemaining = 0;
+        if(!isExpired){
+            daysRemaining = java.time.Duration
+                    .between(LocalDateTime.now(),url.getExpiryDate())
+                    .toDays();
+        }
+        String status = isExpired ? "EXPIRED" : "ACTIVE";
 
         return UrlStatsResponse.builder()
                 .originalUrl(url.getOriginalUrl())
                 .shortCode(url.getShortCode())
                 .clickCount(url.getClickCount())
-                .createAt(url.getCreateAt())
+                .createdAt(url.getCreateAt())
                 .expiryDate(url.getExpiryDate())
+                .expired(isExpired)
+                .daysRemaining(daysRemaining)
+                .status(status)
                 .build();
     }
 
@@ -73,5 +92,23 @@ public class UrlService {
         urlRepository.save(url);
 
         return url.getOriginalUrl();
+    }
+
+    public Page<UrlListResponse> getAllUrls(Pageable pageable){
+        return urlRepository.findAll(pageable)
+                .map(url -> UrlListResponse.builder()
+                        .originalUrl(url.getOriginalUrl())
+                        .shortCode(url.getShortCode())
+                        .clickCount(url.getClickCount())
+                        .createdAt(url.getCreateAt())
+                        .expiryDate(url.getExpiryDate())
+                        .build());
+    }
+
+    public void deleteUrl(String shortCode){
+        Url url = urlRepository.findByShortCode(shortCode)
+                .orElseThrow(() -> new UrlNotFoundException("Short URL not found"));
+
+        urlRepository.delete(url);
     }
 }
