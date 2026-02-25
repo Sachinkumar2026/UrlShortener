@@ -1,5 +1,6 @@
 package com.example.urlshortener.service;
 
+import com.example.urlshortener.dto.UrlStatsResponse;
 import com.example.urlshortener.model.Url;
 import com.example.urlshortener.repository.UrlRepository;
 import org.springframework.stereotype.Service;
@@ -47,5 +48,18 @@ public class UrlService {
         url.setClickCount(url.getClickCount() + 1);
         urlRepository.save(url);
         return url.getOriginalUrl();
+    }
+
+    public UrlStatsResponse getStats(String shortCode){
+        Url url = urlRepository.findByShortCode(shortCode)
+                .orElseThrow(() -> new RuntimeException("URL not found"));
+
+        return UrlStatsResponse.builder()
+                .originalUrl(url.getOriginalUrl())
+                .shortCode(url.getShortCode())
+                .clickCount(url.getClickCount())
+                .createAt(url.getCreateAt())
+                .expiryDate(url.getExpiryDate())
+                .build();
     }
 }
