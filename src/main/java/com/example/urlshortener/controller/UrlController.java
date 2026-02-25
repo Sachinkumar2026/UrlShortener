@@ -15,8 +15,9 @@ public class UrlController {
     }
 
     @PostMapping("/shorten")
-    public String shortenUrl(@RequestParam String url){
-        return urlService.createShortUrl(url);
+    public String shortenUrl(@RequestParam String url,
+                             @RequestParam(required = false) String alias){
+        return urlService.createShortUrl(url,alias);
     }
 
     @GetMapping("/stats/{shortCode}")

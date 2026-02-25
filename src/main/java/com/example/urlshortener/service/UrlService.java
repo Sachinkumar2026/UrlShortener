@@ -1,6 +1,8 @@
 package com.example.urlshortener.service;
 
 import com.example.urlshortener.dto.UrlStatsResponse;
+import com.example.urlshortener.exception.UrlExpiredException;
+import com.example.urlshortener.exception.UrlNotFoundException;
 import com.example.urlshortener.model.Url;
 import com.example.urlshortener.repository.UrlRepository;
 import org.springframework.stereotype.Service;
@@ -15,8 +17,16 @@ public class UrlService {
     public UrlService(UrlRepository urlRepository){
         this.urlRepository = urlRepository;
     }
-    public String createShortUrl(String originalUrl){
-        String shortCode = generateShortCode();
+    public String createShortUrl(String originalUrl,String customAlias){
+        String shortCode;
+        if(customAlias != null && !customAlias.isBlank()){
+            if(urlRepository.findByShortCode(customAlias).isPresent()){
+                throw new RuntimeException("Alias already in use");
+            }
+            shortCode = customAlias;
+        }else {
+            shortCode = generateShortCode();
+        }
 
         Url url = Url.builder()
                 .originalUrl(originalUrl)
@@ -38,21 +48,9 @@ public class UrlService {
         }
         return code.toString();
     }
-
-    public String getOriginalUrl(String shortCode){
-        Url url = urlRepository.findByShortCode(shortCode).orElseThrow(() -> new RuntimeException("URL not found"));
-
-        if(url.getExpiryDate().isBefore(LocalDateTime.now())){
-            throw new RuntimeException("URL expired");
-        }
-        url.setClickCount(url.getClickCount() + 1);
-        urlRepository.save(url);
-        return url.getOriginalUrl();
-    }
-
     public UrlStatsResponse getStats(String shortCode){
         Url url = urlRepository.findByShortCode(shortCode)
-                .orElseThrow(() -> new RuntimeException("URL not found"));
+                .orElseThrow(() -> new UrlNotFoundException("short URL not found"));
 
         return UrlStatsResponse.builder()
                 .originalUrl(url.getOriginalUrl())
@@ -61,5 +59,19 @@ public class UrlService {
                 .createAt(url.getCreateAt())
                 .expiryDate(url.getExpiryDate())
                 .build();
+    }
+
+    public String getOriginalUrl(String shortCode){
+        Url url = urlRepository.findByShortCode(shortCode)
+                .orElseThrow(() -> new UrlNotFoundException("Short URL not found"));
+
+        if(url.getExpiryDate().isBefore(LocalDateTime.now())){
+            throw new UrlExpiredException("Short URL has expired");
+        }
+
+        url.setClickCount(url.getClickCount() + 1);
+        urlRepository.save(url);
+
+        return url.getOriginalUrl();
     }
 }
