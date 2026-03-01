@@ -1,6 +1,7 @@
 package com.example.urlshortener.controller;
 
 import com.example.urlshortener.service.UrlService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,9 +16,11 @@ public class RedirectController {
         this.urlService = urlService;
     }
 
-    @GetMapping("/{shortCode}")
-    public ResponseEntity<Void> redirect(@PathVariable String shortCode){
-        String originalUrl = urlService.getOriginalUrl(shortCode);
+    @GetMapping("/{shortCode:[a-zA-Z0-9]+}")
+    public ResponseEntity<Void> redirect(@PathVariable String shortCode, HttpServletRequest request){
+        String ip = request.getRemoteAddr();
+
+        String originalUrl = urlService.getOriginalUrl(shortCode,ip);
 
         return ResponseEntity
                 .status(302)

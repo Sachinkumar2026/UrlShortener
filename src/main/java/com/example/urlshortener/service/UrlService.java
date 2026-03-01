@@ -1,5 +1,6 @@
 package com.example.urlshortener.service;
 
+import com.example.urlshortener.dto.IpApiResponse;
 import com.example.urlshortener.dto.UrlListResponse;
 import com.example.urlshortener.dto.UrlStatsResponse;
 import com.example.urlshortener.exception.AliasAlreadyExistException;
@@ -10,6 +11,7 @@ import com.example.urlshortener.repository.UrlRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
 import java.util.Random;
@@ -17,6 +19,7 @@ import java.util.Random;
 @Service
 public class UrlService {
     private final UrlRepository urlRepository;
+    private final RestTemplate restTemplate = new RestTemplate();
 
     public UrlService(UrlRepository urlRepository){
         this.urlRepository = urlRepository;
@@ -80,12 +83,22 @@ public class UrlService {
                 .build();
     }
 
-    public String getOriginalUrl(String shortCode){
+    public String getOriginalUrl(String shortCode,String ipAddress){
         Url url = urlRepository.findByShortCode(shortCode)
                 .orElseThrow(() -> new UrlNotFoundException("Short URL not found"));
 
         if(url.getExpiryDate().isBefore(LocalDateTime.now())){
             throw new UrlExpiredException("Short URL has expired");
+        }
+
+        String apiUrl = "http://ip-api.com/json/" + ipAddress;
+
+        IpApiResponse response = restTemplate.getForObject(apiUrl,IpApiResponse.class);
+
+        if(response != null) {
+            url.setLastAccessIp(ipAddress);
+            url.setLastAccessCountry(response.getCountry());
+            url.setLastAccessCity(response.getCity());
         }
 
         url.setClickCount(url.getClickCount() + 1);

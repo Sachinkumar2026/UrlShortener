@@ -27,4 +27,8 @@ public class Url {
     private LocalDateTime expiryDate;
 
     private Long clickCount = 0L;
+
+    private String lastAccessIp;
+    private String lastAccessCountry;
+    private String lastAccessCity;
 }
